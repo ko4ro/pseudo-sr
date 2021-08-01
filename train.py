@@ -1,22 +1,21 @@
+import argparse
 import os
 import random
 from datetime import datetime
 
 import numpy as np
-import argparse
+import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
 from yacs.config import CfgNode
 
-import torch
-import torch.multiprocessing as mp
-import torch.distributed as dist
-
+from models.face_model import Face_Model
 from tools.pseudo_face_data import faces_data
-from tools.utils import save_tensor_image, AverageMeter
-from models.face_trainer import Face_Model
+from tools.utils import AverageMeter, save_tensor_image
 
 main_parse = argparse.ArgumentParser()
-main_parse.add_argument("yaml", type=str)
-main_parse.add_argument("--port", type=int, default=2357, required=False)
+main_parse.add_argument("--yaml", default="configs/faces.yaml", type=str)
+main_parse.add_argument("--port", type=int, default=5000, required=False)
 main_args = main_parse.parse_args()
 with open(main_args.yaml, "rb") as cf:
     CFG = CfgNode.load_cfg(cf)
