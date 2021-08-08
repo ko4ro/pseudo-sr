@@ -5,7 +5,7 @@ from numpy.lib.type_check import imag
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-import torch.nn.functional as nnF
+import torch.nn.functional as F
 import torch
 
 import glob
@@ -53,7 +53,7 @@ class faces_data(Dataset):
             lr = cv2.cvtColor(lr, cv2.COLOR_BGR2RGB)
         data["lr_original"] = self.preproc(lr) * self.img_min_max[1]
         data["lr_path"] = self.lr_files[lr_idx]
-        data["lr"] = nnF.interpolate(data["lr_original"].unsqueeze(0), scale_factor=2, mode="bicubic", align_corners=False).clamp(min=self.img_min_max[0], max=self.img_min_max[1]).squeeze(0)
+        data["lr"] = F.interpolate(data["lr_original"].unsqueeze(0), scale_factor=2, mode="bicubic", align_corners=False).clamp(min=self.img_min_max[0], max=self.img_min_max[1]).squeeze(0)
         if self.ready_hr:
             hr_idx = index % len(self.hr_files)
             hr = cv2.imread(self.hr_files[hr_idx])
@@ -61,7 +61,7 @@ class faces_data(Dataset):
                 hr = cv2.cvtColor(hr, cv2.COLOR_BGR2RGB)
             data["hr"] = self.preproc(hr) * self.img_min_max[1]
             data["hr_path"] = self.hr_files[hr_idx]
-            data["hr_down"] = nnF.interpolate(data["hr"].unsqueeze(0), scale_factor=0.5, mode="bicubic", align_corners=False, recompute_scale_factor=False).clamp(min=self.img_min_max[0], max=self.img_min_max[1]).squeeze(0)
+            data["hr_down"] = F.interpolate(data["hr"].unsqueeze(0), scale_factor=0.5, mode="bicubic", align_corners=False, recompute_scale_factor=False).clamp(min=self.img_min_max[0], max=self.img_min_max[1]).squeeze(0)
         return data
 
     def get_noises(self, n):

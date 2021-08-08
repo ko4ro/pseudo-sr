@@ -1,17 +1,16 @@
 EXP:
-  NAME: faces
+  NAME: dsem
   SEED: 2020
-  OUT_DIR: results/faces
+  OUT_DIR: results/dsem
 
 SR:
   SCALE: 2
   PATCH_SIZE_LR: 32
   BATCH_PER_GPU: 8
-  MODEL: ESRGAN # ESRGAN or UPSCALER
 
 OPT:
-  MAX_ITER: 300000
-  NUM_FREQ: 10
+  MAX_ITER: 1000
+  NUM_FREQ: 2
 
 OPT_CYC:
   LR_D: 0.0001
@@ -22,12 +21,14 @@ OPT_CYC:
   BETAS_G: [0.5, 0.999]
   LR_MILESTONE: [100000, 180000, 240000, 280000]
   LR_DECAY: 0.5
-  GAN_TYPE: "vanilla"
+  GAN_TYPE: 'lsgan'
   LOSS:
     CYC_WEIGHT: 1
     IDT_WEIGHT: 2
     GEO_WEIGHT: 1
-    D_SR_WEIGHT: 0.1
+    D_SR_WEIGHT: 0
+    D_Gxy_WEIGHT: 1
+    D_Gyx_WEIGHT: 1
   IDT_INPUT: clean # corrupted or clean
 
 OPT_SR:
@@ -57,9 +58,9 @@ RESUME:
   HR_GAN: False
 
 DATA:
-  FOLDER: /home/Dataset/Face-and-Image-super-resolution/
+  FOLDER: /home/Dataset/SEM-Image-denoising-and-deblurring/images_256
   NUM_WORKERS: 8
   IMG_RANGE: 1 # for ESRGAN, set it to 1
   IMG_MEAN_SHIFT: False # for ESRGAN, set it to False
-  RGB: True
-  HOLD-OUT: False
+  RGB: False
+  HOLDOUT: False

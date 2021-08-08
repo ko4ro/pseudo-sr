@@ -72,7 +72,7 @@ class ResidualGroup(nn.Module):
 class RCAN(nn.Module):
     def __init__(self, args, conv=common.default_conv):
         super(RCAN, self).__init__()
-        
+
         n_resgroups = args["n_resgroups"]
         n_resblocks = args["n_resblocks"]
         n_feats = args["n_feats"]
@@ -80,7 +80,7 @@ class RCAN(nn.Module):
         reduction = args["reduction"]
         scale = args["scale"]
         act = nn.ReLU(True)
-        
+
         # RGB mean for DIV2K 1-800
         #rgb_mean = (0.4488, 0.4371, 0.4040)
         # RGB mean for DIVFlickr2K 1-3450
@@ -96,7 +96,7 @@ class RCAN(nn.Module):
             rgb_mean = args["rgb_mean"]
         rgb_std = (1.0, 1.0, 1.0)
         self.sub_mean = common.MeanShift(args["rgb_range"], rgb_mean, rgb_std)
-        
+
         # define head module
         modules_head = [conv(args["n_colors"], n_feats, kernel_size)]
 

@@ -18,7 +18,11 @@ CUDA_VISIBLE_DEVICES=2,3 python train.py configs/faces.yaml --port 12121
 ```
 
 The `--port` option is only required for multi-gpu training.
-You can use a number between 49152 and 65535 for the port number. 
+You can use a number between 49152 and 65535 for the port number.
+# Acronym
+
+LR : Low Representation image
+HR : High Representation image
 
 # Reproducibility
 
