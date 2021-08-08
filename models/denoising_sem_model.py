@@ -5,6 +5,8 @@ from models.geo_loss import geometry_ensemble
 from models.losses import GANLoss
 from models.pseudo_model import Pseudo_Model
 from models.generators import TransferNet
+from models.discriminators import NLayerDiscriminator
+
 
 
 
@@ -16,6 +18,8 @@ class Sem_Model(Pseudo_Model):
         del self.U
         del self.opt_U
         del self.lr_U
+        del self.D_x
+        del self.D_y
         del self.D_sr
         del self.opt_Dsr
         del self.lr_Dsr
@@ -30,6 +34,8 @@ class Sem_Model(Pseudo_Model):
         rgb_range = cfg.DATA.IMG_RANGE
         rgb_mean_point = (0.5, 0.5, 0.5) if cfg.DATA.IMG_MEAN_SHIFT else (0, 0, 0)
         self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=0).to(device)
+        self.D_x = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
+        self.D_y = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.discs = ["D_x", "D_y"]
         self.gens = ["G_xy", "G_yx"]
         self.gan_loss = GANLoss(cfg.OPT_CYC.GAN_TYPE)
@@ -86,7 +92,7 @@ class Sem_Model(Pseudo_Model):
         # fake_Xs = self.G_yx(Ys, Zs) ## TODO:Check to confirm if Zs noise is required or not.
         rec_Ys = self.G_xy(fake_Xs)
         fake_Ys = self.G_xy(Xs)
-        geo_Ys = geometry_ensemble(self.G_xy, Xs)
+        # geo_Ys = geometry_ensemble(self.G_xy, Xs)
         idt_out = self.G_xy(Ys) if self.idt_input_clean else fake_Ys
         # sr_y = self.U(rec_Yds)
         # sr_x = self.U(fake_Yds)
@@ -134,18 +140,18 @@ class Sem_Model(Pseudo_Model):
             else self.l1_loss(idt_out, Xs)
         )
         loss_cycle = self.l1_loss(rec_Ys, Ys)
-        loss_geo = self.l1_loss(fake_Ys, geo_Ys)
+        # loss_geo = self.l1_loss(fake_Ys, geo_Ys)
         loss_total_gen = (
             +self.d_gyx_weight * loss_gan_Gyx
             + self.d_gxy_weight * loss_gan_Gxy
             + self.cyc_weight * loss_cycle
             + self.idt_weight * loss_idt_Gxy
-            + self.geo_weight * loss_geo
+            # + self.geo_weight * loss_geo
         )
         loss_dict["G_yx_gan"] = loss_gan_Gyx.item()
         loss_dict["G_xy_gan"] = loss_gan_Gxy.item()
         loss_dict["G_xy_idt"] = loss_idt_Gxy.item()
-        loss_dict["G_xy_geo"] = loss_geo.item()
+        # loss_dict["G_xy_geo"] = loss_geo.item()
         loss_dict["cyc_loss"] = loss_cycle.item()
         loss_dict["G_total"] = loss_total_gen.item()
 

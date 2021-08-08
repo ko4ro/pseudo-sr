@@ -4,7 +4,7 @@ EXP:
   OUT_DIR: results/dsem
 
 SR:
-  SCALE: 2
+  SCALE: 1
   CHANEL: 3
   PATCH_SIZE_LR: 256
   BATCH_PER_GPU: 1

@@ -76,11 +76,11 @@ class dsem_data(Dataset):
 
     def __getitem__(self, index):
         data = dict()
-        if np.prod(self.z_size) > 0:
-            data["z"] = torch.randn(1, *self.z_size, dtype=torch.float32)
+        # if np.prod(self.z_size) > 0:
+        #     data["z"] = torch.randn(1, *self.z_size, dtype=torch.float32)
 
         lr_idx = index % len(self.lr_files)
-        lr = cv2.imread(self.lr_files[lr_idx])
+        lr = cv2.imread(self.lr_files[lr_idx],0)
         if self.rgb:
             lr = cv2.cvtColor(lr, cv2.COLOR_BGR2RGB)
         data["lr"] = self.preproc(lr) * self.img_min_max[1]
@@ -88,13 +88,13 @@ class dsem_data(Dataset):
         if self.ready_hr:
             hr_idx = index % len(self.hr_files)
             if self.dataset_split:
-                hr = cv2.imread(self.hr_files[self.hr_train_indices[index]])
-                hr_test = cv2.imread(self.hr_files[self.hr_test_indices[index]])
+                hr = cv2.imread(self.hr_files[self.hr_train_indices[index]],0)
+                hr_test = cv2.imread(self.hr_files[self.hr_test_indices[index]],0)
                 data["hr_path"] = self.hr_files[self.hr_train_indices[index]]
                 data["hr_test"] = hr_test * self.img_min_max[1]
                 data["hr_test_path"] = self.hr_files[self.hr_test_indices[index]]
             else:
-                hr = cv2.imread(self.hr_files[hr_idx])
+                hr = cv2.imread(self.hr_files[hr_idx],0)
                 data["hr_path"] = self.hr_files[hr_idx]
             if self.rgb:
                 hr = cv2.cvtColor(hr, cv2.COLOR_BGR2RGB)

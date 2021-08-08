@@ -13,7 +13,8 @@ class TransferNet(nn.Module):
         leaky_neg = leaky_neg
         filter_size = 5
         z_channel = z_feat
-        in_img = [common.default_conv(3, n_feat, filter_size)]
+        in_img = [common.default_conv(1, n_feat, filter_size)]
+        # in_img = [common.default_conv(3, n_feat, filter_size)]
 
         if z_channel == 0:
             if bn:
@@ -43,19 +44,19 @@ class TransferNet(nn.Module):
             nn.LeakyReLU(leaky_neg),
             common.default_conv(n_feat//2, n_feat//4, 1),
             nn.LeakyReLU(leaky_neg),
-            common.default_conv(n_feat//4, 3, 1))
+            common.default_conv(n_feat//4, 1, 1))
 
     def forward(self, x, z=None):
-        out_x = self.sub_mean(x)
+        # out_x = self.sub_mean(x)
 
-        out = self.img_head(out_x)
+        out = self.img_head(x)
         if z is not None:
             out_z = self.z_head(z)
             out = self.merge(torch.cat((out, out_z), dim=1))
         out = self.res_blocks(out)
         out = self.fusion(out)
 
-        out = self.add_mean(out)
+        # out = self.add_mean(out)
         return out
 
 if __name__ == "__main__":

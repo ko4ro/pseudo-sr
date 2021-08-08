@@ -120,14 +120,14 @@ class RCAN(nn.Module):
         self.tail = nn.Sequential(*modules_tail)
 
     def forward(self, x):
-        x = self.sub_mean(x)
+        # x = self.sub_mean(x)
         x = self.head(x)
 
         res = self.body(x)
         res += x
 
         x = self.tail(res)
-        x = self.add_mean(x)
+        # x = self.add_mean(x)
 
         return x
 
@@ -159,7 +159,7 @@ class RCAN(nn.Module):
 
 def make_cleaning_net(rgb_range=255, rgb_mean=(0.5, 0.5, 0.5)):
     opt = {"n_resgroups":5, "n_resblocks":10, "n_feats":64, "reduction":16, "scale":1,
-            "data_train":"NONE", "rgb_range":rgb_range, "rgb_mean":rgb_mean, "n_colors":3,
+            "data_train":"NONE", "rgb_range":rgb_range, "rgb_mean":rgb_mean, "n_colors":1,
             "res_scale":1.0}
     return RCAN(opt)
 
