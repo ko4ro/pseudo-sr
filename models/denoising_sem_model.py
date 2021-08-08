@@ -4,12 +4,15 @@ import torch.nn as nn
 from models.geo_loss import geometry_ensemble
 from models.losses import GANLoss
 from models.pseudo_model import Pseudo_Model
+from models.generators import TransferNet
+
 
 
 class Sem_Model(Pseudo_Model):
     def __init__(self, device, cfg, use_ddp=False):
         super(Sem_Model, self).__init__(device=device, cfg=cfg, use_ddp=use_ddp)
         self.sr_warmup_iter = cfg.OPT_SR.WARMUP
+        del self.G_yx
         del self.U
         del self.opt_U
         del self.lr_U
@@ -24,6 +27,9 @@ class Sem_Model(Pseudo_Model):
         del self.lr_decays["D_sr"]
         del self.discs
         del self.gens
+        rgb_range = cfg.DATA.IMG_RANGE
+        rgb_mean_point = (0.5, 0.5, 0.5) if cfg.DATA.IMG_MEAN_SHIFT else (0, 0, 0)
+        self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=0).to(device)
         self.discs = ["D_x", "D_y"]
         self.gens = ["G_xy", "G_yx"]
         self.gan_loss = GANLoss(cfg.OPT_CYC.GAN_TYPE)

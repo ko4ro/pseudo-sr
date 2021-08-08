@@ -17,5 +17,6 @@ lightgbm
 yacs
 torch
 torchvision
+torchinfo
 opencv-python
 mlflow

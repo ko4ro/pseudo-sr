@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from torchinfo import summary
 from yacs.config import CfgNode as CN
 
 from models.face_model import Face_Model
@@ -68,7 +69,11 @@ def main(rank, world_size, cpu=False):
         model = Sem_Model(rank, CFG, world_size > 1)
     else:
         raise Exception("Unexpected error: CFG.EXP.NAME is not defined")
-
+    # summary(
+    #     model,
+    #     input_size=(CFG.SR.BATCH_PER_GPU, CFG.SR.CHANEL, CFG.SR.PATCH_SIZE_LR, CFG.SR.PATCH_SIZE_LR),
+    #     col_names=["output_size", "num_params"],
+    # )
     trainset, testset = get_dataset(CFG)
     loader = get_train_loader(trainset, world_size, batch_per_gpu)
 

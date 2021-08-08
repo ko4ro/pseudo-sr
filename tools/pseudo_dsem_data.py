@@ -83,20 +83,8 @@ class dsem_data(Dataset):
         lr = cv2.imread(self.lr_files[lr_idx])
         if self.rgb:
             lr = cv2.cvtColor(lr, cv2.COLOR_BGR2RGB)
-        data["lr_original"] = self.preproc(lr) * self.img_min_max[1]
+        data["lr"] = self.preproc(lr) * self.img_min_max[1]
         data["lr_path"] = self.lr_files[lr_idx]
-        data["lr_path"] = self.lr_files[lr_idx]
-        ## TODO:Check to confirm if F.interpolate is required or not.
-        data["lr"] = (
-            F.interpolate(
-                data["lr_original"].unsqueeze(0),
-                scale_factor=2,
-                mode="bicubic",
-                align_corners=False,
-            )
-            .clamp(min=self.img_min_max[0], max=self.img_min_max[1])
-            .squeeze(0)
-        )
         if self.ready_hr:
             hr_idx = index % len(self.hr_files)
             if self.dataset_split:
