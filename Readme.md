@@ -22,6 +22,7 @@ You can use a number between 49152 and 65535 for the port number.
 # Acronym
 
 LR : Low Representation image
+
 HR : High Representation image
 
 # Reproducibility
