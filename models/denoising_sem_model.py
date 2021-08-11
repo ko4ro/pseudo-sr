@@ -36,6 +36,9 @@ class Sem_Model(Pseudo_Model):
         self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=0).to(device)
         self.D_x = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.D_y = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
+        self.nets["G_yx"] = self.G_yx
+        self.nets["D_x"] = self.D_x
+        self.nets["D_y"] = self.D_y
         self.discs = ["D_x", "D_y"]
         self.gens = ["G_xy", "G_yx"]
         self.gan_loss = GANLoss(cfg.OPT_CYC.GAN_TYPE)
@@ -73,9 +76,9 @@ class Sem_Model(Pseudo_Model):
         """
         fake_x = None
         with torch.no_grad():
-            y = self.nets["G_xy"](Xs)
+            y = self.G_xy(Xs)
         if Ys is not None:
-            fake_x = self.nets["G_yx"](Ys)
+            fake_x = self.G_yx(Ys)
         return y, fake_x
 
     def train_step(self, Xs, Ys, Zs=None):
@@ -86,7 +89,6 @@ class Sem_Model(Pseudo_Model):
         """
         self.n_iter += 1
         loss_dict = dict()
-
         # forward
         fake_Xs = self.G_yx(Ys)
         # fake_Xs = self.G_yx(Ys, Zs) ## TODO:Check to confirm if Zs noise is required or not.

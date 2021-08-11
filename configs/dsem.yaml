@@ -5,12 +5,12 @@ EXP:
 
 SR:
   SCALE: 1
-  CHANEL: 3
+  CHANEL: 1
   PATCH_SIZE_LR: 256
   BATCH_PER_GPU: 1
 
 OPT:
-  MAX_ITER: 1000
+  MAX_ITER: 30000
   NUM_FREQ: 2
 
 OPT_CYC:
@@ -60,7 +60,7 @@ RESUME:
 
 DATA:
   FOLDER: /home/Dataset/SEM-Image-denoising-and-deblurring/images_256
-  NUM_WORKERS: 8
+  NUM_WORKERS: 1
   IMG_RANGE: 1 # for ESRGAN, set it to 1
   IMG_MEAN_SHIFT: False # for ESRGAN, set it to False
   RGB: False

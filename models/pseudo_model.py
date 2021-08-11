@@ -23,12 +23,12 @@ class Pseudo_Model():
         self.D_y = NLayerDiscriminator(3, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.D_sr = NLayerDiscriminator(3, scale_factor=cfg.SR.SCALE, norm_layer=nn.Identity).to(device)
         if use_ddp:
-            self.G_xy = DDP(self.G_xy, device_ids=[device])
-            self.G_yx = DDP(torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.G_yx), device_ids=[device])
-            self.U = DDP(self.U, device_ids=[device])
-            self.D_x = DDP(self.D_x, device_ids=[device])
-            self.D_y = DDP(self.D_y, device_ids=[device])
-            self.D_sr = DDP(self.D_sr, device_ids=[device])
+            self.G_xy = DDP(self.G_xy, device_ids=[device], find_unused_parameters=True)
+            self.G_yx = DDP(torch.nn.SyncBatchNorm.convert_sync_batchnorm(self.G_yx), device_ids=[device], find_unused_parameters=True)
+            # self.U = DDP(self.U, device_ids=[device])
+            self.D_x = DDP(self.D_x, device_ids=[device], find_unused_parameters=True)
+            self.D_y = DDP(self.D_y, device_ids=[device], find_unused_parameters=True)
+            # self.D_sr = DDP(self.D_sr, device_ids=[device])
 
         self.opt_Gxy = optim.Adam(self.G_xy.parameters(), lr=cfg.OPT_CYC.LR_G, betas=cfg.OPT_CYC.BETAS_G)
         self.opt_Gyx = optim.Adam(self.G_yx.parameters(), lr=cfg.OPT_CYC.LR_G, betas=cfg.OPT_CYC.BETAS_G)

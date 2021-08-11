@@ -69,11 +69,7 @@ def main(rank, world_size, cpu=False):
         model = Sem_Model(rank, CFG, world_size > 1)
     else:
         raise Exception("Unexpected error: CFG.EXP.NAME is not defined")
-    # summary(
-    #     model,
-    #     input_size=(CFG.SR.BATCH_PER_GPU, CFG.SR.CHANEL, CFG.SR.PATCH_SIZE_LR, CFG.SR.PATCH_SIZE_LR),
-    #     col_names=["output_size", "num_params"],
-    # )
+    # summary(model, input_size=(CFG.SR.BATCH_PER_GPU, CFG.SR.CHANEL, CFG.SR.PATCH_SIZE_LR, CFG.SR.PATCH_SIZE_LR),col_names=["output_size", "num_params"])
     trainset, testset = get_dataset(CFG)
     loader = get_train_loader(trainset, world_size, batch_per_gpu)
 
@@ -121,7 +117,7 @@ def main(rank, world_size, cpu=False):
             print(info + "\r", end="")
             model.lr_decay_step(True)
 
-        if ep % test_freq == 0 and rank == last_device:
+        if ep % 1 == 0 and rank == last_device:
             print(f"\nTesting and saving: Epoch {ep}")
             model.net_save(net_save_folder)
             model.mode_selector("eval")

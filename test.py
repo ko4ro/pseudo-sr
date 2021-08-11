@@ -6,7 +6,8 @@ import torch
 from yacs.config import CfgNode
 
 from models.face_model import Face_Model
-from tools.pseudo_face_data import faces_data
+from models.denoising_sem_model import Sem_Model
+from tools.get_dataset import get_dataset
 from tools.utils import save_tensor_image
 
 
@@ -42,55 +43,65 @@ def main():
     parser.add_argument(
         "--trained_model_path",
         type=str,
-        default="results/faces/nets/nets_302939.pth",
+        default="results/dsem/nets/nets_704.pth",
         help='.pth include with {"nets", "optims", "lr_decays"}',
     )
     parser.add_argument(
         "--config_path",
         type=str,
-        default="configs/faces.yaml",
+        default="configs/dsem.yaml",
         help="config yaml file of training",
     )
     args = parser.parse_args()
-    img_save_folder = os.path.join(os.getcwd(), "test_imgs")
-    os.makedirs(img_save_folder, exist_ok=True)
     with open(args.config_path, "rb") as cf:
         CFG = CfgNode.load_cfg(cf)
         CFG.freeze()
 
+    img_save_folder = os.path.join(CFG.EXP.OUT_DIR, "test")
+    os.makedirs(img_save_folder, exist_ok=True)
     device = 0
-    testset = faces_data(
-        data_lr=os.path.join(CFG.DATA.FOLDER, "testset"),
-        data_hr=None,
-        b_train=False,
-        shuffle=False,
-        img_range=CFG.DATA.IMG_RANGE,
-        rgb=CFG.DATA.RGB,
-    )
-    model = Face_Model(device, CFG)
+    trainset, _ = get_dataset(CFG)
+    if CFG.EXP.NAME == "faces":
+        model = Face_Model(device, CFG)
+    elif CFG.EXP.NAME == "dsem":
+        model = Sem_Model(device, CFG)
+    else:
+        raise Exception("Unexpected error: CFG.EXP.NAME is not defined")
     net_load(model, args.trained_model_path)
     model.mode_selector("test")
-    for b in range(len(testset)):
-        lr = testset[b]["lr"].unsqueeze(0).to(device)
-        y, sr, _ = model.test_sample(lr)
+    for b in range(len(trainset)):
+        if b > 10:
+            break
+        lr = trainset[b]["lr"].unsqueeze(0).to(device)
+        if CFG.EXP.NAME == "faces":
+            y, sr, _ = model.test_sample(lr)
+            save_tensor_image(
+                os.path.join(img_save_folder, f"{b:04d}_sr.png"),
+                sr,
+                CFG.DATA.IMG_RANGE,
+                CFG.DATA.RGB,
+            )
+        elif CFG.EXP.NAME == "dsem":
+            hr = trainset[b]["hr"].unsqueeze(0).to(device)
+            y, fake_x = model.test_sample(lr, hr)
+            save_tensor_image(
+                os.path.join(img_save_folder, f"{b:04d}_hr.png"),
+                hr,
+                CFG.DATA.IMG_RANGE,
+                CFG.DATA.RGB,
+            )
+            save_tensor_image(
+                os.path.join(img_save_folder, f"{b:04d}_fake_x.png"),
+                fake_x,
+                CFG.DATA.IMG_RANGE,
+                CFG.DATA.RGB,
+            )
         save_tensor_image(
             os.path.join(img_save_folder, f"{b:04d}_y.png"),
             y,
             CFG.DATA.IMG_RANGE,
             CFG.DATA.RGB,
         )
-        save_tensor_image(
-            os.path.join(img_save_folder, f"{b:04d}_sr.png"),
-            sr,
-            CFG.DATA.IMG_RANGE,
-            CFG.DATA.RGB,
-        )
-        # save_tensor_image(
-        #     os.path.join(img_save_folder, f"{b:04d}_x.png"),
-        #     sr,
-        #     CFG.DATA.IMG_RANGE,
-        #     CFG.DATA.RGB,
-        # )
         save_tensor_image(
             os.path.join(img_save_folder, f"{b:04d}_lr.png"),
             lr,
