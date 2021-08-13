@@ -13,25 +13,26 @@ class TransferNet(nn.Module):
         leaky_neg = leaky_neg
         filter_size = 5
         z_channel = z_feat
-        in_img = [common.default_conv(1, n_feat, filter_size)]
         # in_img = [common.default_conv(3, n_feat, filter_size)]
 
         if z_channel == 0:
+            in_img = [common.default_conv(1, n_feat, filter_size)]
             if bn:
                 in_img.append(nn.BatchNorm2d(n_feat))
             in_img.append(nn.LeakyReLU(leaky_neg))
             in_img.append(common.ResBlock(common.default_conv, n_feat, filter_size, bn=bn, act=nn.LeakyReLU(leaky_neg)))
             self.img_head = nn.Sequential(*in_img)
         else:
+            in_img = [common.default_conv(1, n_feat//2, filter_size)]
             if bn:
                 in_img.append(nn.BatchNorm2d(n_feat//2))
             in_img.append(nn.LeakyReLU(leaky_neg))
             in_img.append(common.ResBlock(common.default_conv, n_feat//2, filter_size, bn=bn, act=nn.LeakyReLU(leaky_neg)))
             self.img_head = nn.Sequential(*in_img)
 
-            in_z = [nn.ConvTranspose2d(1, z_channel, 2, 2, 0, 0), # 8 -> 16
+            in_z = [nn.ConvTranspose2d(1, z_channel, 2, 2, 0, 0), # z_feat -> z_feat*2
                     nn.LeakyReLU(leaky_neg),
-                    nn.ConvTranspose2d(z_channel, 2 * z_channel, 2, 2, 0, 0), # 16 -> 32
+                    nn.ConvTranspose2d(z_channel, 2 * z_channel, 2, 2, 0, 0), # z_feat*2 -> z_feat*4
                     nn.LeakyReLU(leaky_neg)]
             self.z_head = nn.Sequential(*in_z)
             self.merge = nn.Conv2d(n_feat//2 + 2*z_channel, n_feat, 1, 1, 0)

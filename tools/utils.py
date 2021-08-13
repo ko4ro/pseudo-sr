@@ -14,6 +14,8 @@ def tensor_to_image(tensor, img_range, rgb=True):
 def save_tensor_image(file_name, tensor, img_range, rgb=True):
     img = tensor_to_image(tensor, img_range=img_range, rgb=rgb)
     cv2.imwrite(file_name, img)
+    return img
+
 
 class AverageMeter():
     def __init__(self, data=None, ema_alpha=None):

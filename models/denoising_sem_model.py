@@ -33,7 +33,7 @@ class Sem_Model(Pseudo_Model):
         del self.gens
         rgb_range = cfg.DATA.IMG_RANGE
         rgb_mean_point = (0.5, 0.5, 0.5) if cfg.DATA.IMG_MEAN_SHIFT else (0, 0, 0)
-        self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=0).to(device)
+        self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=cfg.OPT.NOIZE).to(device)
         self.D_x = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.D_y = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.nets["G_yx"] = self.G_yx
@@ -90,8 +90,7 @@ class Sem_Model(Pseudo_Model):
         self.n_iter += 1
         loss_dict = dict()
         # forward
-        fake_Xs = self.G_yx(Ys)
-        # fake_Xs = self.G_yx(Ys, Zs) ## TODO:Check to confirm if Zs noise is required or not.
+        fake_Xs = self.G_yx(Ys, Zs) ## TODO:Check to confirm if Zs noise is required or not.
         rec_Ys = self.G_xy(fake_Xs)
         fake_Ys = self.G_xy(Xs)
         # geo_Ys = geometry_ensemble(self.G_xy, Xs)

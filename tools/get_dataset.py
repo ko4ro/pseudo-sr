@@ -32,7 +32,8 @@ def get_dataset(CFG):
             data_hr=os.path.join(CFG.DATA.FOLDER, "HIGH"),
             img_range=CFG.DATA.IMG_RANGE,
             rgb=CFG.DATA.RGB,
-            dataset_split = CFG.DATA.HOLDOUT
+            dataset_split = CFG.DATA.HOLDOUT,
+            z_size=(CFG.OPT.NOIZE, CFG.OPT.NOIZE)
         )
 
         testset = None

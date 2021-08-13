@@ -76,8 +76,8 @@ class dsem_data(Dataset):
 
     def __getitem__(self, index):
         data = dict()
-        # if np.prod(self.z_size) > 0:
-        #     data["z"] = torch.randn(1, *self.z_size, dtype=torch.float32)
+        if np.prod(self.z_size) > 0:
+            data["z"] = torch.randn(1, *self.z_size, dtype=torch.float32)
 
         lr_idx = index % len(self.lr_files)
         lr = cv2.imread(self.lr_files[lr_idx],0)

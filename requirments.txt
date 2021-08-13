@@ -10,11 +10,11 @@ matplotlib
 japanize-matplotlib
 # plotly
 scikit-learn
-# tensorflow
 # keras
 optuna
 lightgbm
 yacs
+tensorboard
 torch
 torchvision
 torchinfo
