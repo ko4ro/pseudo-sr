@@ -4,26 +4,33 @@ import torch.nn as nn
 from . import common
 
 class TransferNet(nn.Module):
-    def __init__(self, n_feat=64, z_feat=8, leaky_neg=0.2, n_resblock=6, bn=False, rgb_range=255, rgb_mean=(0.5, 0.5, 0.5),):
+    def __init__(self, n_feat=64, z_feat=8, leaky_neg=0.2, n_resblock=6, bn=False, rgb_range=255, rgb_mean=(0.5, 0.5, 0.5)):
         super(TransferNet, self).__init__()
-        rgb_std = (1.0, 1.0, 1.0)
-        self.sub_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std)
-        self.add_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std, 1)
+        if type(rgb_mean) is tuple:
+            rgb_std = (1.0, 1.0, 1.0)
+            # What role does common.MeanShift plays? https://github.com/yulunzhang/RCAN/issues/68
+            self.sub_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std)
+            self.add_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std, 1)
+            channel = 3
+        else:
+            # rgb_std = (1.0)
+            # self.sub_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std)
+            # self.add_mean = common.MeanShift(rgb_range, rgb_mean, rgb_std, 1)
+            channel = 1
 
         leaky_neg = leaky_neg
         filter_size = 5
         z_channel = z_feat
-        # in_img = [common.default_conv(3, n_feat, filter_size)]
 
         if z_channel == 0:
-            in_img = [common.default_conv(1, n_feat, filter_size)]
+            in_img = [common.default_conv(channel, n_feat, filter_size)]
             if bn:
                 in_img.append(nn.BatchNorm2d(n_feat))
             in_img.append(nn.LeakyReLU(leaky_neg))
             in_img.append(common.ResBlock(common.default_conv, n_feat, filter_size, bn=bn, act=nn.LeakyReLU(leaky_neg)))
             self.img_head = nn.Sequential(*in_img)
         else:
-            in_img = [common.default_conv(1, n_feat//2, filter_size)]
+            in_img = [common.default_conv(channel, n_feat//2, filter_size)]
             if bn:
                 in_img.append(nn.BatchNorm2d(n_feat//2))
             in_img.append(nn.LeakyReLU(leaky_neg))
@@ -45,11 +52,10 @@ class TransferNet(nn.Module):
             nn.LeakyReLU(leaky_neg),
             common.default_conv(n_feat//2, n_feat//4, 1),
             nn.LeakyReLU(leaky_neg),
-            common.default_conv(n_feat//4, 1, 1))
+            common.default_conv(n_feat//4, channel, 1))
 
     def forward(self, x, z=None):
-        # out_x = self.sub_mean(x)
-
+        # x = self.sub_mean(x)
         out = self.img_head(x)
         if z is not None:
             out_z = self.z_head(z)

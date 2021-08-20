@@ -94,8 +94,9 @@ class RCAN(nn.Module):
         else:
             # print(f'rgb mean ({args["rgb_mean"][0]}, {args["rgb_mean"][1]}, {args["rgb_mean"][2]})')
             rgb_mean = args["rgb_mean"]
-        rgb_std = (1.0, 1.0, 1.0)
-        self.sub_mean = common.MeanShift(args["rgb_range"], rgb_mean, rgb_std)
+        if type(rgb_mean) is tuple:
+            rgb_std = (1.0, 1.0, 1.0)
+            self.sub_mean = common.MeanShift(args["rgb_range"], rgb_mean, rgb_std)
 
         # define head module
         modules_head = [conv(args["n_colors"], n_feats, kernel_size)]
@@ -113,7 +114,8 @@ class RCAN(nn.Module):
             common.Upsampler(conv, scale, n_feats, act=False),
             conv(n_feats, args["n_colors"], kernel_size)]
 
-        self.add_mean = common.MeanShift(args["rgb_range"], rgb_mean, rgb_std, 1)
+        if type(rgb_mean) is tuple:
+            self.add_mean = common.MeanShift(args["rgb_range"], rgb_mean, rgb_std, 1)
 
         self.head = nn.Sequential(*modules_head)
         self.body = nn.Sequential(*modules_body)
@@ -159,7 +161,7 @@ class RCAN(nn.Module):
 
 def make_cleaning_net(rgb_range=255, rgb_mean=(0.5, 0.5, 0.5)):
     opt = {"n_resgroups":5, "n_resblocks":10, "n_feats":64, "reduction":16, "scale":1,
-            "data_train":"NONE", "rgb_range":rgb_range, "rgb_mean":rgb_mean, "n_colors":1,
+            "data_train":"NONE", "rgb_range":rgb_range, "rgb_mean":rgb_mean, "n_colors": 3 if type(rgb_mean) is tuple else 1,
             "res_scale":1.0}
     return RCAN(opt)
 

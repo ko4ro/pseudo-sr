@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import cv2
+import re
 from sklearn.model_selection import train_test_split
 
 from torch.utils.data import Dataset, dataset
@@ -29,7 +30,7 @@ class dsem_data(Dataset):
             self.hr_files = [
                 p
                 for p in glob.glob(os.path.join(data_hr, "**"), recursive=True)
-                if os.path.splitext(os.path.basename(p))[1] in [".jpg", ".png", ".bmp"]
+                if os.path.splitext(os.path.basename(p))[1] in [".jpg", ".png", ".bmp"] and re.search("d1" + "_", p.lower())
             ]
             self.hr_files.sort()
         self.lr_files = [
@@ -54,14 +55,6 @@ class dsem_data(Dataset):
                     transforms.ToPILImage(),
                     transforms.RandomHorizontalFlip(0.5),
                     transforms.RandomVerticalFlip(0.5),
-                    transforms.RandomApply(
-                        [
-                            transforms.ColorJitter(
-                                brightness=0.1, contrast=0.1, saturation=0, hue=0
-                            )
-                        ],
-                        p=0.5,
-                    ),
                     transforms.ToTensor(),
                 ]
             )

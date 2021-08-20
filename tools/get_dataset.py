@@ -28,7 +28,7 @@ def get_dataset(CFG):
     elif CFG.EXP.NAME == "dsem":
 
         trainset = dsem_data(
-            data_lr=os.path.join(CFG.DATA.FOLDER, "LOW/saitama"),
+            data_lr=os.path.join(CFG.DATA.FOLDER, "LOW/saitama/d1"),
             data_hr=os.path.join(CFG.DATA.FOLDER, "HIGH"),
             img_range=CFG.DATA.IMG_RANGE,
             rgb=CFG.DATA.RGB,

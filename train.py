@@ -1,19 +1,21 @@
 import argparse
 import os
 import random
+import sys
 from datetime import datetime
 
 import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from torch.utils import tensorboard
+from torch._C import Value
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
 from yacs.config import CfgNode as CN
 
-from models.face_model import Face_Model
 from models.denoising_sem_model import Sem_Model
+from models.face_model import Face_Model
+from tools.create_log import get_logger
 from tools.get_dataset import get_dataset
 from tools.utils import AverageMeter, save_tensor_image
 
@@ -73,17 +75,21 @@ def main(rank, world_size, cpu=False):
     else:
         raise Exception("Unexpected error: CFG.EXP.NAME is not defined")
     # summary(model, input_size=(CFG.SR.BATCH_PER_GPU, CFG.SR.CHANEL, CFG.SR.PATCH_SIZE_LR, CFG.SR.PATCH_SIZE_LR),col_names=["output_size", "num_params"])
-    output_dir_path = os.path.join(CFG.EXP.OUT_DIR, f"{datetime.now().strftime('%Y%d%m%H%M')}")
-    tb_log_path = os.path.join(output_dir_path,"logs")
-    print(f"Tensorboard log : tensorboard dev upload --logdir={tb_log_path}")
-    os.makedirs(tb_log_path, exist_ok=True)
+    # _LOG = get_logger(__name__, os.path.join(output_dir_path, "log.txt"))
+    try:
+        output_dir_path = os.path.join(
+            CFG.EXP.OUT_DIR, f"{datetime.now().strftime('%Y%m%d%H%M')}"
+        )
+        tb_log_path = os.path.join(output_dir_path, "logs")
+        os.makedirs(tb_log_path)
+        print(f"Tensorboard log : tensorboard --logdir={tb_log_path}")
+    except:
+        pass
     writer = SummaryWriter(log_dir=tb_log_path)
     trainset, testset = get_dataset(CFG)
     loader = get_train_loader(trainset, world_size, batch_per_gpu)
-
     end_ep = int(np.ceil(CFG.OPT.MAX_ITER / len(loader))) + 1
     test_freq = max([end_ep // CFG.OPT.NUM_FREQ, 1])
-
     if rank == last_device:
         net_save_folder = os.path.join(output_dir_path, "nets")
         img_save_folder = os.path.join(output_dir_path, "imgs")
@@ -97,7 +103,7 @@ def main(rank, world_size, cpu=False):
             f"Max epoch: {end_ep - 1}, Total iteration: {(end_ep - 1) * len(loader)}, Iterations per epoch: {len(loader)}, Test & Save epoch: every {test_freq} epoches"
         )
 
-    loss_avgs = dict()
+    loss_avgs = {}
     for ep in range(1, end_ep):
         model.mode_selector("train")
         for b, batch in enumerate(loader):
@@ -118,7 +124,6 @@ def main(rank, world_size, cpu=False):
 
             info = f"  {model.n_iter}({ep}/{end_ep-1}):"
             for i, itm in enumerate(losses.items()):
-                # writer.add_scalar(f" {itm[0]}", itm[1], ep*b)
                 if itm[0] not in loss_avgs.keys():
                     loss_avgs[itm[0]] = AverageMeter(itm[1])
                 else:
@@ -128,11 +133,12 @@ def main(rank, world_size, cpu=False):
                     if i > 0
                     else f" {itm[0]}={loss_avgs[itm[0]].get_avg():.3f}"
                 )
-                writer.add_scalar(f"loss/{itm[0]}", loss_avgs[itm[0]].get_avg(), ep*b)
+                writer.add_scalar(f"loss/{itm[0]}", loss_avgs[itm[0]].get_avg(), ep * b)
             print(info + "\r", end="")
             model.lr_decay_step(True)
 
-        if ep % test_freq == 0 and rank == last_device:
+        images = {}
+        if ep % 1 == 0 and rank == last_device:
             print(f"\nTesting and saving: Epoch {ep}")
             model.net_save(net_save_folder)
             model.mode_selector("eval")
@@ -142,7 +148,7 @@ def main(rank, world_size, cpu=False):
                 lr = trainset[b]["lr"].unsqueeze(0).to(rank)
                 if CFG.EXP.NAME == "faces":
                     y, sr, _ = model.test_sample(lr)
-                    sr = save_tensor_image(
+                    images["sr"] = save_tensor_image(
                         os.path.join(img_save_folder, f"{b:04d}_sr.png"),
                         sr,
                         CFG.DATA.IMG_RANGE,
@@ -150,35 +156,50 @@ def main(rank, world_size, cpu=False):
                     )
                 elif CFG.EXP.NAME == "dsem":
                     hr = trainset[b]["hr"].unsqueeze(0).to(rank)
-                    y, fake_x = model.test_sample(lr, hr)
-                    hr_img = save_tensor_image(
+                    if CFG.OPT.NOIZE == 0:
+                        y, fake_x = model.test_sample(lr, hr, Zs=None)
+                    else:
+                        zs = trainset[b]["z"].unsqueeze(0).to(rank)
+                        y, fake_x = model.test_sample(lr, hr, zs)
+                    images["hr"] = save_tensor_image(
                         os.path.join(img_save_folder, f"{b:04d}_hr.png"),
                         hr,
                         CFG.DATA.IMG_RANGE,
                         CFG.DATA.RGB,
                     )
-                    fake_x_img =save_tensor_image(
+                    images["fake_x"] = save_tensor_image(
                         os.path.join(img_save_folder, f"{b:04d}_fake_x.png"),
                         fake_x,
                         CFG.DATA.IMG_RANGE,
                         CFG.DATA.RGB,
                     )
-                y = save_tensor_image(
+                images["y"] = save_tensor_image(
                     os.path.join(img_save_folder, f"{b:04d}_y.png"),
                     y,
                     CFG.DATA.IMG_RANGE,
                     CFG.DATA.RGB,
                 )
-                lr = save_tensor_image(
+                images["lr"] = save_tensor_image(
                     os.path.join(img_save_folder, f"{b:04d}_lr.png"),
                     lr,
                     CFG.DATA.IMG_RANGE,
                     CFG.DATA.RGB,
                 )
-                writer.add_images(tag="images/hr_img", img_tensor=hr_img, global_step=test_freq)
-                writer.add_images(tag="images/fake_x_img", img_tensor=fake_x_img, global_step=test_freq)
-                writer.add_images(tag="images/y", img_tensor=y, global_step=test_freq)
-                writer.add_images(tag="images/lr", img_tensor=lr, global_step=test_freq)
+                for key, value in images.items():
+                    if CFG.EXP.NAME == "faces":
+                        writer.add_images(
+                            tag=f"images/{key}",
+                            img_tensor=value,
+                            global_step=ep,
+                            dataformats="HWC",
+                        )
+                    elif CFG.EXP.NAME == "dsem":
+                        writer.add_images(
+                            tag=f"images/{key}",
+                            img_tensor=value,
+                            global_step=ep,
+                            dataformats="HW",
+                        )
         if world_size > 1:
             dist.barrier()
 
@@ -188,16 +209,36 @@ def main(rank, world_size, cpu=False):
         model.mode_selector("test")
         for b in range(len(trainset)):
             lr = trainset[b]["lr"].unsqueeze(0).to(rank)
-            y, sr, _ = model.test_sample(lr)
+            if CFG.EXP.NAME == "faces":
+                y, sr, _ = model.test_sample(lr)
+                save_tensor_image(
+                    os.path.join(img_save_folder, f"{b:04d}_sr.png"),
+                    sr,
+                    CFG.DATA.IMG_RANGE,
+                    CFG.DATA.RGB,
+                )
+            elif CFG.EXP.NAME == "dsem":
+                hr = trainset[b]["hr"].unsqueeze(0).to(rank)
+                if CFG.OPT.NOIZE == 0:
+                    y, fake_x = model.test_sample(lr, hr, Zs=None)
+                else:
+                    zs = trainset[b]["z"].unsqueeze(0).to(rank)
+                    y, fake_x = model.test_sample(lr, hr, zs)
+                save_tensor_image(
+                    os.path.join(img_save_folder, f"{b:04d}_hr.png"),
+                    hr,
+                    CFG.DATA.IMG_RANGE,
+                    CFG.DATA.RGB,
+                )
+                save_tensor_image(
+                    os.path.join(img_save_folder, f"{b:04d}_fake_x.png"),
+                    fake_x,
+                    CFG.DATA.IMG_RANGE,
+                    CFG.DATA.RGB,
+                )
             save_tensor_image(
                 os.path.join(img_save_folder, f"{b:04d}_y.png"),
                 y,
-                CFG.DATA.IMG_RANGE,
-                CFG.DATA.RGB,
-            )
-            save_tensor_image(
-                os.path.join(img_save_folder, f"{b:04d}_sr.png"),
-                sr,
                 CFG.DATA.IMG_RANGE,
                 CFG.DATA.RGB,
             )
@@ -211,6 +252,8 @@ def main(rank, world_size, cpu=False):
         dist.barrier()
     if world_size > 1:
         cleanup()
+    # _LOG.exception(sys.exc_info())
+
 
 
 if __name__ == "__main__":
@@ -228,7 +271,10 @@ if __name__ == "__main__":
         n_gpus = torch.cuda.device_count()
 
     if n_gpus <= 1:
-        print("single proc.", f", time: {datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}")
+        print(
+            "single proc.",
+            f", time: {datetime.now().strftime('%Y-%d-%m_%H:%M:%S')}",
+        )
         main(0, n_gpus, cpu=(n_gpus == 0))
     elif n_gpus > 1:
         print(
@@ -237,3 +283,4 @@ if __name__ == "__main__":
         )
         mp.spawn(main, nprocs=n_gpus, args=(n_gpus, False), join=True)
     print("fin.")
+

@@ -6,7 +6,8 @@ def tensor_to_image(tensor, img_range, rgb=True):
     if rgb:
         assert len(m_tens.size()) == 3
         arrays = np.clip(m_tens.numpy().transpose(1, 2, 0), a_min=0, a_max=img_range) / img_range
-    arrays = np.clip(m_tens.numpy(), a_min=0, a_max=img_range) / img_range
+    else:
+        arrays = np.clip(m_tens.numpy(), a_min=0, a_max=img_range) / img_range
     img = np.around(arrays * 255).astype(np.uint8)
     if rgb: img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return img

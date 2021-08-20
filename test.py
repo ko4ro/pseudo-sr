@@ -43,7 +43,7 @@ def main():
     parser.add_argument(
         "--trained_model_path",
         type=str,
-        default="results/dsem/nets/nets_704.pth",
+        default="results/dsem/202114080006/nets/nets_2816.pth",
         help='.pth include with {"nets", "optims", "lr_decays"}',
     )
     parser.add_argument(
@@ -57,7 +57,7 @@ def main():
         CFG = CfgNode.load_cfg(cf)
         CFG.freeze()
 
-    img_save_folder = os.path.join(CFG.EXP.OUT_DIR, "test")
+    img_save_folder = os.path.join(os.path.dirname(os.path.pardir(args.trained_model_path)), "test")
     os.makedirs(img_save_folder, exist_ok=True)
     device = 0
     trainset, _ = get_dataset(CFG)
@@ -83,7 +83,11 @@ def main():
             )
         elif CFG.EXP.NAME == "dsem":
             hr = trainset[b]["hr"].unsqueeze(0).to(device)
-            y, fake_x = model.test_sample(lr, hr)
+            if CFG.OPT.NOIZE == 0:
+                y, fake_x = model.test_sample(lr, hr, Zs=None)
+            else:
+                zs = trainset[b]["z"].unsqueeze(0).to(device)
+                y, fake_x = model.test_sample(lr, hr, zs)
             save_tensor_image(
                 os.path.join(img_save_folder, f"{b:04d}_hr.png"),
                 hr,

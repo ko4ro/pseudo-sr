@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
 
+from models.discriminators import NLayerDiscriminator
+from models.generators import TransferNet
 from models.geo_loss import geometry_ensemble
 from models.losses import GANLoss
 from models.pseudo_model import Pseudo_Model
-from models.generators import TransferNet
-from models.discriminators import NLayerDiscriminator
-
-
+from models.rcan import make_cleaning_net
 
 
 class Sem_Model(Pseudo_Model):
@@ -32,8 +31,9 @@ class Sem_Model(Pseudo_Model):
         del self.discs
         del self.gens
         rgb_range = cfg.DATA.IMG_RANGE
-        rgb_mean_point = (0.5, 0.5, 0.5) if cfg.DATA.IMG_MEAN_SHIFT else (0, 0, 0)
+        rgb_mean_point = (0.5) if cfg.DATA.IMG_MEAN_SHIFT else (0.0)
         self.G_yx = TransferNet(rgb_range=rgb_range, rgb_mean=rgb_mean_point, z_feat=cfg.OPT.NOIZE).to(device)
+        self.G_xy = make_cleaning_net(rgb_range=rgb_range, rgb_mean=rgb_mean_point).to(device)
         self.D_x = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.D_y = NLayerDiscriminator(1, scale_factor=1, norm_layer=nn.Identity).to(device)
         self.nets["G_yx"] = self.G_yx
@@ -45,6 +45,8 @@ class Sem_Model(Pseudo_Model):
         self.l1_loss = nn.L1Loss()
         self.d_gyx_weight = cfg.OPT_CYC.LOSS.D_Gxy_WEIGHT
         self.d_gxy_weight = cfg.OPT_CYC.LOSS.D_Gyx_WEIGHT
+        self.n_rotate = cfg.OPT_CYC.GEO_ROTATE
+        self.flip_dir = cfg.OPT_CYC.GEO_FLIP
 
     def warmup_checker(self):
         return self.n_iter <= self.sr_warmup_iter
@@ -78,7 +80,7 @@ class Sem_Model(Pseudo_Model):
         with torch.no_grad():
             y = self.G_xy(Xs)
         if Ys is not None:
-            fake_x = self.G_yx(Ys)
+            fake_x = self.G_yx(Ys, Zs)
         return y, fake_x
 
     def train_step(self, Xs, Ys, Zs=None):
@@ -92,8 +94,8 @@ class Sem_Model(Pseudo_Model):
         # forward
         fake_Xs = self.G_yx(Ys, Zs) ## TODO:Check to confirm if Zs noise is required or not.
         rec_Ys = self.G_xy(fake_Xs)
-        fake_Ys = self.G_xy(Xs)
-        # geo_Ys = geometry_ensemble(self.G_xy, Xs)
+        # fake_Ys = self.G_xy(Xs)
+        fake_Ys, geo_Ys = geometry_ensemble(self.G_xy, Xs, self.n_rotate, self.flip_dir)
         idt_out = self.G_xy(Ys) if self.idt_input_clean else fake_Ys
         # sr_y = self.U(rec_Yds)
         # sr_x = self.U(fake_Yds)
@@ -141,18 +143,18 @@ class Sem_Model(Pseudo_Model):
             else self.l1_loss(idt_out, Xs)
         )
         loss_cycle = self.l1_loss(rec_Ys, Ys)
-        # loss_geo = self.l1_loss(fake_Ys, geo_Ys)
+        loss_geo = self.l1_loss(fake_Ys, geo_Ys)
         loss_total_gen = (
             +self.d_gyx_weight * loss_gan_Gyx
             + self.d_gxy_weight * loss_gan_Gxy
             + self.cyc_weight * loss_cycle
             + self.idt_weight * loss_idt_Gxy
-            # + self.geo_weight * loss_geo
+            + self.geo_weight * loss_geo
         )
         loss_dict["G_yx_gan"] = loss_gan_Gyx.item()
         loss_dict["G_xy_gan"] = loss_gan_Gxy.item()
         loss_dict["G_xy_idt"] = loss_idt_Gxy.item()
-        # loss_dict["G_xy_geo"] = loss_geo.item()
+        loss_dict["G_xy_geo"] = loss_geo.item()
         loss_dict["cyc_loss"] = loss_cycle.item()
         loss_dict["G_total"] = loss_total_gen.item()
 

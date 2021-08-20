@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-def geometry_ensemble(net, img, flip_dir="H"):
+def geometry_ensemble(net, img, n_rotate=4, flip_dir="H"):
     assert len(img.shape) == 4
     assert flip_dir in ["H", "V", None]
     if flip_dir == "H":
@@ -9,7 +9,7 @@ def geometry_ensemble(net, img, flip_dir="H"):
     elif flip_dir == "V":
         flip_axes = [2]
     imgs = []
-    for r in range(4):
+    for r in range(n_rotate):
         imgs.append(torch.rot90(img, r, [2, 3]))
     if flip_dir:
         flips = []
@@ -19,14 +19,15 @@ def geometry_ensemble(net, img, flip_dir="H"):
     outs = []
     for r, im in enumerate(imgs):
         temp = net(im)
-        if r < 4:
+        if r < n_rotate:
             outs.append(torch.rot90(temp, -r, [2, 3]))
         else:
             temp2 = torch.flip(temp, flip_axes)
-            outs.append(torch.rot90(temp2, -(r%4), [2, 3]))
+            outs.append(torch.rot90(temp2, -(r%n_rotate), [2, 3]))
+    fake_Ys = outs[0]
     for i in range(1, len(outs)):
         outs[0] += outs[i]
-    return outs[0] / len(outs)
+    return fake_Ys, outs[0] / len(outs)
 
 
 if __name__ == "__main__":
