@@ -15,7 +15,7 @@ from yacs.config import CfgNode as CN
 
 from models.denoising_sem_model import Sem_Model
 from models.face_model import Face_Model
-from tools.create_log import get_logger
+# from tools.create_log import get_logger
 from tools.get_dataset import get_dataset
 from tools.utils import AverageMeter, save_tensor_image
 

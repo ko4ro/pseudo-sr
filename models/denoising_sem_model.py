@@ -145,7 +145,7 @@ class Sem_Model(Pseudo_Model):
         loss_cycle = self.l1_loss(rec_Ys, Ys)
         loss_geo = self.l1_loss(fake_Ys, geo_Ys)
         loss_total_gen = (
-            +self.d_gyx_weight * loss_gan_Gyx
+            + self.d_gyx_weight * loss_gan_Gyx
             + self.d_gxy_weight * loss_gan_Gxy
             + self.cyc_weight * loss_cycle
             + self.idt_weight * loss_idt_Gxy

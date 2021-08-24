@@ -10,9 +10,10 @@ SR:
   BATCH_PER_GPU: 1
 
 OPT:
-  MAX_ITER: 300000
+  MAX_ITER: 3000
+  # MAX_ITER: 30
   NUM_FREQ: 1
-  NOIZE: 0 #64
+  NOIZE: 64
 
 OPT_CYC:
   LR_D: 0.0001
@@ -21,16 +22,16 @@ OPT_CYC:
   MOMENTUM: 0.9
   BETAS_D: [0.5, 0.999]
   BETAS_G: [0.5, 0.999]
-  LR_MILESTONE: [100000, 180000, 240000, 280000]
+  LR_MILESTONE: [1000, 1800, 2400, 2800]
   LR_DECAY: 0.5
-  GAN_TYPE: 'lsgan'
+  GAN_TYPE: 'vanilla' # 'vanilla', 'lsgan', 'wgan', 'hinge'
   LOSS:
     CYC_WEIGHT: 1
-    IDT_WEIGHT: 1
-    GEO_WEIGHT: 1
+    IDT_WEIGHT: 2
+    GEO_WEIGHT: 0
     D_SR_WEIGHT: 0
     D_Gxy_WEIGHT: 1
-    D_Gyx_WEIGHT: 1
+    D_Gyx_WEIGHT: 2
   GEO_ROTATE: 1
   GEO_FLIP: "H" # "H", "V", None
   IDT_INPUT: null # corrupted or clean
@@ -64,7 +65,7 @@ RESUME:
 DATA:
   FOLDER: /home/Dataset/SEM-Image-denoising-and-deblurring/images_256
   NUM_WORKERS: 4
-  IMG_RANGE: 255 # for ESRGAN, set it to 1
+  IMG_RANGE: 1 # for ESRGAN, set it to 1
   IMG_MEAN_SHIFT: False # for ESRGAN, set it to False
   RGB: False
   HOLDOUT: False
